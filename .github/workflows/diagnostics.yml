@@ -25,4 +25,4 @@ jobs:
           pip install requests beautifulsoup4
 
       - name: Run diagnostics
-        run: python -u diagnose_matches.py
+        run: python -u test_match_finder.py
