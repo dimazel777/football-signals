@@ -38,7 +38,17 @@ def main():
 
     print("\nПервые 20 ненайденных матчей:")
     for match in unmatched[:20]:
-        print("-", match)
+        for pari_match in pari_matches:
+    info = pari_match.get("matchInfo") or {}
+    home = (info.get("homeTeam") or {}).get("name", "?")
+    away = (info.get("awayTeam") or {}).get("name", "?")
+
+    if f"{home} — {away}" in unmatched:
+        tournament = (info.get("tournament") or {}).get("name", "?")
+        country = ((info.get("tournament") or {}).get("country") or {}).get("name", "?")
+        start = info.get("startDate", "?")
+
+        print(f"{home} — {away} | {country} | {tournament} | {start}")
 
 if __name__ == "__main__":
     main()
