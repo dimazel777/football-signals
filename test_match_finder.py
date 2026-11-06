@@ -1,81 +1,60 @@
-import time
+from datetime import datetime
 
 from pari_client import get_upcoming_matches
-from collect_today_matches import main as get_soccer365_matches
-from match_finder import find_soccer365_match
+from soccer365_corners import get_match_info
+
+TARGET_ID = 69584100
+
+SOCCER365_URL = (
+    "https://soccer365.ru/live/"
+    "match-fadjr-sepasi-persepolis-smotret-onlayn/"
+)
 
 def main():
-    print("Загружаю матчи PARI...")
+    print("Проверяю доступность PARI...")
+
     pari_matches = get_upcoming_matches(limit=200)
 
-    soccer_matches = None
+    target = next(
+        (
+            match for match in pari_matches
+            if (match.get("matchInfo") or {}).get("eventId") == TARGET_ID
+        ),
+        None
+    )
 
-    for attempt in range(1, 4):
-        print(
-            f"Загружаю Soccer365 "
-            f"(попытка {attempt}/3)..."
-        )
+    if not target:
+        print("Целевой матч не найден в PARI.")
+        return
 
-        try:
-            result = get_soccer365_matches()
+    info = target.get("matchInfo") or {}
 
-            if result:
-                soccer_matches = result
-                break
+    home = (info.get("homeTeam") or {}).get("name", "?")
+    away = (info.get("awayTeam") or {}).get("name", "?")
 
-        except Exception as error:
-            print(f"Ошибка: {error}")
+    print(f"Матч PARI: {home} — {away}")
+    print(f"Время PARI: {info.get('startDate')}")
 
-        if attempt < 3:
-            print("Повтор через 10 секунд...")
-            time.sleep(10)
+    print("\nПроверяю отдельную страницу Soccer365...")
 
-    if not soccer_matches:
-        raise RuntimeError(
-            "Не удалось загрузить расписание Soccer365 "
-            "после трёх попыток. Проверка остановлена."
-        )
+    try:
+        soccer_info = get_match_info(SOCCER365_URL)
 
-    matched = []
-    unmatched = []
+        pari_time = datetime.fromisoformat(
+            info["startDate"].replace("Z", "+00:00")
+        ).timestamp()
 
-    print("\n========== МАССОВАЯ ПРОВЕРКА ==========")
+        soccer_time = int(soccer_info["kickoff"])
 
-    for pari_match in pari_matches:
-        info = pari_match.get("matchInfo") or {}
+        print("СТРАНИЦА ДОСТУПНА")
+        print(f"Время Soccer365: {soccer_time}")
+        print(f"Разница во времени: {abs(pari_time - soccer_time)} секунд")
+        print(f"ID домашней команды: {soccer_info['home_id']}")
+        print(f"ID гостевой команды: {soccer_info['away_id']}")
 
-        home = (info.get("homeTeam") or {}).get("name", "?")
-        away = (info.get("awayTeam") or {}).get("name", "?")
-
-        result = find_soccer365_match(
-            pari_match,
-            soccer_matches
-        )
-
-        if result:
-            matched.append((home, away))
-            print(f"НАЙДЕН: {home} — {away}")
-        else:
-            tournament = info.get("tournament") or {}
-            country = (tournament.get("country") or {}).get("name", "?")
-            start = info.get("startDate", "?")
-
-            unmatched.append(
-                (home, away, country, tournament.get("name", "?"), start)
-            )
-
-    print("\n========== ИТОГИ ==========")
-    print(f"Матчей PARI: {len(pari_matches)}")
-    print(f"Найдено совпадений: {len(matched)}")
-    print(f"Не найдено: {len(unmatched)}")
-
-    print("\nПервые 20 ненайденных матчей:")
-
-    for home, away, country, tournament, start in unmatched[:20]:
-        print(
-            f"{home} — {away} | {country} | "
-            f"{tournament} | {start}"
-        )
+    except Exception as error:
+        print("ОШИБКА ДОСТУПА К ОТДЕЛЬНОЙ СТРАНИЦЕ:")
+        print(repr(error))
 
 if __name__ == "__main__":
     main()
