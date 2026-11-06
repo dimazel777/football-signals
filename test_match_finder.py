@@ -9,10 +9,10 @@ def main():
     print("Загружаю матчи Soccer365...")
     soccer_matches = get_soccer365_matches()
 
-    print("\n========== МАССОВАЯ ПРОВЕРКА ==========")
-
     matched = []
     unmatched = []
+
+    print("\n========== МАССОВАЯ ПРОВЕРКА ==========")
 
     for pari_match in pari_matches:
         info = pari_match.get("matchInfo") or {}
@@ -26,10 +26,16 @@ def main():
         )
 
         if result:
-            matched.append((home, away, result))
+            matched.append((home, away))
             print(f"НАЙДЕН: {home} — {away}")
         else:
-            unmatched.append(f"{home} — {away}")
+            tournament = info.get("tournament") or {}
+            country = (tournament.get("country") or {}).get("name", "?")
+            start = info.get("startDate", "?")
+
+            unmatched.append(
+                (home, away, country, tournament.get("name", "?"), start)
+            )
 
     print("\n========== ИТОГИ ==========")
     print(f"Матчей PARI: {len(pari_matches)}")
@@ -37,18 +43,12 @@ def main():
     print(f"Не найдено: {len(unmatched)}")
 
     print("\nПервые 20 ненайденных матчей:")
-    for match in unmatched[:20]:
-        for pari_match in pari_matches:
-    info = pari_match.get("matchInfo") or {}
-    home = (info.get("homeTeam") or {}).get("name", "?")
-    away = (info.get("awayTeam") or {}).get("name", "?")
 
-    if f"{home} — {away}" in unmatched:
-        tournament = (info.get("tournament") or {}).get("name", "?")
-        country = ((info.get("tournament") or {}).get("country") or {}).get("name", "?")
-        start = info.get("startDate", "?")
-
-        print(f"{home} — {away} | {country} | {tournament} | {start}")
+    for home, away, country, tournament, start in unmatched[:20]:
+        print(
+            f"{home} — {away} | {country} | "
+            f"{tournament} | {start}"
+        )
 
 if __name__ == "__main__":
     main()
