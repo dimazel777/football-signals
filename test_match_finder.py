@@ -1,3 +1,5 @@
+import time
+
 from pari_client import get_upcoming_matches
 from collect_today_matches import main as get_soccer365_matches
 from match_finder import find_soccer365_match
@@ -6,8 +8,33 @@ def main():
     print("Загружаю матчи PARI...")
     pari_matches = get_upcoming_matches(limit=200)
 
-    print("Загружаю матчи Soccer365...")
-    soccer_matches = get_soccer365_matches()
+    soccer_matches = None
+
+    for attempt in range(1, 4):
+        print(
+            f"Загружаю Soccer365 "
+            f"(попытка {attempt}/3)..."
+        )
+
+        try:
+            result = get_soccer365_matches()
+
+            if result:
+                soccer_matches = result
+                break
+
+        except Exception as error:
+            print(f"Ошибка: {error}")
+
+        if attempt < 3:
+            print("Повтор через 10 секунд...")
+            time.sleep(10)
+
+    if not soccer_matches:
+        raise RuntimeError(
+            "Не удалось загрузить расписание Soccer365 "
+            "после трёх попыток. Проверка остановлена."
+        )
 
     matched = []
     unmatched = []
