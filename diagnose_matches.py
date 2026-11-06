@@ -1,50 +1,43 @@
+from datetime import datetime, timezone
+
 from pari_client import get_upcoming_matches
-from collect_today_matches import main as get_soccer365_matches
+from soccer365_corners import get_match_info
+
+MATCH_ID = 69584100
+MATCH_URL = "https://soccer365.ru/live/match-fadjr-sepasi-persepolis-smotret-onlayn/"
 
 def main():
-    print("\n========== ДИАГНОСТИКА PARI ==========\n")
+    print("========== PARI ==========")
 
-    try:
-        pari_matches = get_upcoming_matches(limit=200)
+    matches = get_upcoming_matches(limit=200)
+    pari_match = None
 
-        print(f"Получено матчей PARI: {len(pari_matches)}")
+    for match in matches:
+        info = match.get("matchInfo") or {}
 
-        for match in pari_matches[:15]:
-            info = match.get("matchInfo") or {}
+        if info.get("eventId") == MATCH_ID:
+            pari_match = info
+            break
 
-            home = (info.get("homeTeam") or {}).get("name")
-            away = (info.get("awayTeam") or {}).get("name")
+    if pari_match:
+        pari_time = datetime.fromisoformat(pari_match["startDate"])
 
-            print(
-                f"{home} — {away} | "
-                f"{info.get('startDate')} | "
-                f"ID: {info.get('eventId')}"
-            )
+        print("Матч:", pari_match["homeTeam"]["name"], "-", pari_match["awayTeam"]["name"])
+        print("Время PARI:", pari_time.isoformat())
+        print("Время PARI в UTC:", pari_time.astimezone(timezone.utc).isoformat())
+    else:
+        print("Матч не найден в PARI")
 
-    except Exception as error:
-        print(f"Ошибка PARI: {error}")
+    print("\n========== SOCCER365 ==========")
 
-    print("\n========== ДИАГНОСТИКА SOCCER365 ==========\n")
+    info = get_match_info(MATCH_URL)
 
-    try:
-        soccer_matches = get_soccer365_matches()
-
-        if not soccer_matches:
-            print("Матчи Soccer365 не найдены.")
-            return
-
-        print(f"\nПолучено матчей Soccer365: {len(soccer_matches)}")
-
-        for match in soccer_matches[:15]:
-            print(
-                f"{match['match']} | "
-                f"{match['kickoff']} | "
-                f"{match['country']} | "
-                f"{match['url']}"
-            )
-
-    except Exception as error:
-        print(f"Ошибка Soccer365: {error}")
+    print("Матч:", info["title"])
+    print("Unix timestamp:", info["kickoff"])
+    print(
+        "Время Soccer365 в UTC:",
+        datetime.fromtimestamp(info["kickoff"], timezone.utc).isoformat()
+    )
 
 if __name__ == "__main__":
     main()
