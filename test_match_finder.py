@@ -15,17 +15,10 @@ def main():
 
     pari_matches = get_upcoming_matches(limit=200)
 
-    target = next(
-        (
-            match for match in pari_matches
-            if (match.get("matchInfo") or {}).get("eventId") == TARGET_ID
-        ),
-        None
-    )
+    target = pari_matches[0]
 
-    if not target:
-        print("Целевой матч не найден в PARI.")
-        return
+print(f"Матч PARI: {target.get('matchInfo', {}).get('homeTeam', {}).get('name')} — "
+      f"{target.get('matchInfo', {}).get('awayTeam', {}).get('name')}")
 
     info = target.get("matchInfo") or {}
 
